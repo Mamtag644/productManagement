@@ -34,4 +34,9 @@ const isValidDate = function(date){
   return regexDate.test(date)
 }
 
-module.exports = { isValidString , isValidMobileNo , isValidEmail , isValidPassword , isValidpincode , isValidDate }
+const isValidBody = (data)=> {
+  return Object.keys(data).length > 0;
+}
+
+
+module.exports = { isValidString , isValidMobileNo , isValidEmail , isValidPassword , isValidpincode , isValidDate ,isValidBody}

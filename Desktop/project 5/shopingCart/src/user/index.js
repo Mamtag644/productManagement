@@ -1,9 +1,11 @@
 const express=require('express');
 const router=express.Router();
-const usercontroller= require('./userController');
-// const auth=require('../middleware/authentication');
-router.post('/register',usercontroller);
-router.post('/login',usercontroller)
+const {createUser,loginUser,getUser,updateUser}= require('./userController');
+const {authentication}  = require('../middleware/authentication');
+router.post('/register',createUser);
+router.post('/login',loginUser);
+router.get('/:userId/profile',authentication,getUser);
+router.put('/:userId/profile',updateUser)
 
 
 // router.get('/test',(req,res)=>{

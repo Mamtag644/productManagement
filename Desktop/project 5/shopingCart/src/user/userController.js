@@ -1,9 +1,11 @@
 const userModel = require('./userSchema');
-const { isValidString,isValidEmail,isValidMobileNo,isValidPassword,isValidpincode} = require('../utils/validtion')
+const { isValidString,isValidEmail,isValidMobileNo,isValidPassword,isValidpincode,isValidBody} = require('../utils/validtion')
 const {uploadFile} = require('../utils/aws.js');
+const jwt= require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const { default: mongoose } = require('mongoose');
 
-module.exports = async function (req, res) {
+const createUser  = async function (req, res) {
     try {
     let data = req.body;
     let files = req.files;
@@ -151,3 +153,114 @@ module.exports = async function (req, res) {
         })
     }
 }
+
+
+
+
+
+//***************************************************** [user login] *****************************************************************
+const loginUser = async function (req, res) {
+    try {
+        let loginData = req.body
+        let { email, password } = loginData
+ 
+        if (!isValidBody(loginData)) return res.status(400).send({ status: false, message: "Please fill email or password" })
+        
+        if (!isValidEmail(email)) {
+            return res.status(400).send({ status: false, message: `Please fill valid or mandatory email ` })
+        }
+ 
+        if (!password)
+            return res.status(400).send({ status: false, message: `Please fill valid or mandatory password ` })
+ 
+        let user = await userModel.findOne({ email: loginData.email });
+        if (!user) {
+            return res.status(404).send({ status: false, message: "User Not found" });
+        }
+        
+        //comparing hard-coded password to the hashed password
+        const validPassword = await bcrypt.compare(password, user.password)
+        if (!validPassword) {
+            return res.status(400).send({ status: false, message: "wrong password" })
+        }
+        let token = jwt.sign({ "userId": user._id }, "productManagement", { expiresIn: '24h' });
+
+
+        return res.status(200).send({ status: true, message: "login successfully", data: { userId: user._id, token: token } })
+    } catch (err) {
+        return res.status(500).send({ status: false, message: err.message })
+    }
+ } 
+
+
+// **********************************************************[Get User]**************************************************
+ const getUser = async (req,res)=>{
+   try
+   {
+      const userId = req.params.userId;
+      console.log(userId)
+      if(!mongoose.isValidObjectId(userId)) return res.status(400).send({msg:"userId is not Valid"});
+    
+      const user = await userModel.findOne({ _id: userId });
+      if(!user) return res.status(404).send({status:false,msg:"user not found"});
+
+    return res.status(200).send({status:true, massage: "User all Details", data: user });
+      
+   }
+   catch(err)
+   {
+    res.status(500).send({status:false, massage: err.massage})
+   }
+}
+
+
+const updateUser=async function(req,res){
+    try{
+        const userId=req.params.userId
+        const data=req.body
+    const {fname,lname,phone,email,password,address}=data
+
+    if (fname) {
+        if (!isValidString(fname)) return res.status(400).send({ status: false, message: "please provide valid fname" })
+        }
+    if (lname) {
+        if (!isValidString(lname)) return res.status(400).send({ status: false, message: "please provide valid lname" })
+            }
+    if (email) {
+         if (!isValidEmail(email)) return res.status(400).send({ status: false, message: "please provide valid email" })
+        }
+    if (password) {
+         if (!isValidPassword(password)) return res.status(400).send({ status: false, message: "please provide valid password" })
+         } 
+
+    if (phone) {
+            if (!isValidMobileNo(phone)) return res.status(400).send({ status: false, message: "please provide valid phone no" })
+            }  
+            // let {shipping,billing}=address;
+    if(address){
+    if (address.shipping) {
+        if(!isValidString(address.shipping.street)) return res.status(400).send({ status: false, message: "please provide valid street" })
+        if (!isValidString(address.shipping.city)) return res.status(400).send({ status: false, message: "please provide valid city" })   
+        if (!isValidpincode(address.shipping.pincode)) return res.status(400).send({ status: false, message: "please provide valid pincode" })
+        } 
+    if (address.billing) {
+        if(!isValidString(address.billing.street)) return res.status(400).send({ status: false, message: "please provide valid street" })
+        if (!isValidString(address.billing.city))  return res.status(400).send({ status: false, message: "please provide valid city" })
+        if (!isValidpincode(address.billing.pincode)) return res.status(400).send({ status: false, message: "please provide valid pincode" })
+           } 
+        }
+    const updatedUser = await userModel.findOneAndUpdate({ _id: userId }, { $set: {data} }, { new: true ,upsert:true})
+    if(!updatedUser)return res.status(404).send({status:false,message:"User is not found"})
+
+    return res.status(200).send({ status: true, message: "Success", data: updatedUser }) 
+
+    }catch(err){
+        return res.status(500).send({status:false,msg:err.message})
+    }
+}
+
+
+
+
+
+module.exports={createUser,loginUser,getUser,updateUser}

@@ -4,6 +4,7 @@ const {uploadFile} = require('../utils/aws.js');
 const jwt= require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const { default: mongoose } = require('mongoose');
+const { config } = require('dotenv');
 
 const createUser  = async function (req, res) {
     try {
@@ -217,8 +218,9 @@ const loginUser = async function (req, res) {
 const updateUser=async function(req,res){
     try{
         const userId=req.params.userId
-        const data=req.body
-    const {fname,lname,phone,email,password,address}=data
+        const data=req.body;
+        const files= req.files;
+        const {fname,lname,phone,email,password,address,profileImage}=data
 
     if (fname) {
         if (!isValidString(fname)) return res.status(400).send({ status: false, message: "please provide valid fname" })
@@ -230,7 +232,8 @@ const updateUser=async function(req,res){
          if (!isValidEmail(email)) return res.status(400).send({ status: false, message: "please provide valid email" })
         }
     if (password) {
-         if (!isValidPassword(password)) return res.status(400).send({ status: false, message: "please provide valid password" })
+         if (!isValidPassword(password)) return res.status(400).send({ status: false, message: "please provide valid password" });
+         password = await bcrypt.hash(password, 10)
          } 
 
     if (phone) {
@@ -249,7 +252,16 @@ const updateUser=async function(req,res){
         if (!isValidpincode(address.billing.pincode)) return res.status(400).send({ status: false, message: "please provide valid pincode" })
            } 
         }
-    const updatedUser = await userModel.findOneAndUpdate({ _id: userId }, { $set: {data} }, { new: true ,upsert:true})
+    if(files.length != 0) {
+        var fileImgUrl= await uploadFile(files[0]);
+
+    } 
+    let updateData={
+        fname,lname,email,password,phone,address,profileImage:fileImgUrl
+
+    }
+    console.log(updateData)
+    const updatedUser = await userModel.findOneAndUpdate({ _id: userId }, { $set: updateData }, { new: true ,upsert:true})
     if(!updatedUser)return res.status(404).send({status:false,message:"User is not found"})
 
     return res.status(200).send({ status: true, message: "Success", data: updatedUser }) 
